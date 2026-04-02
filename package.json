@@ -1,0 +1,11 @@
+{
+  "name": "ugr-test-psicomotricidad",
+  "main": "index.html",
+  "window": {
+    "title": "UGR - Test Psicomotricidad",
+    "width": 1000,
+    "height": 800,
+    "toolbar": false,
+    "fullscreen": false
+  }
+}
