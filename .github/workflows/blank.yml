@@ -1,4 +1,4 @@
-name: Crear Ejecutable Windows
+name: Crear Ejecutable Robusto
 on: [push, workflow_dispatch]
 
 jobs:
@@ -6,19 +6,32 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Descargar codigo
-        uses: actions/checkout@v4 # Actualizado a v4
+        uses: actions/checkout@v4
 
-      - name: Instalar Node.js
-        uses: actions/setup-node@v4 # Actualizado a v4
-        with:
-          node-version: 20
-
-      - name: Convertir HTML a EXE
+      - name: Descargar motor NW.js
         run: |
-          npx nativefier "file:///${{ github.workspace }}/index.html" --name "UGR-Test" --internal-urls ".*" --single-instance
-          
-      - name: Guardar el archivo EXE
-        uses: actions/upload-artifact@v4 # <--- ESTA ES LA LÍNEA CRÍTICA QUE DABA ERROR
+          curl -L https://dl.nwjs.io/v0.82.0/nwjs-v0.82.0-win-x64.zip -o nwjs.zip
+          7z x nwjs.zip
+          mv nwjs-v0.82.0-win-x64 engine
+
+      - name: Empaquetar Juego
+        shell: pwsh
+        run: |
+          # Creamos el paquete de la app
+          Compress-Archive -Path "index.html", "package.json" -DestinationPath "app.nw"
+          # Unimos el motor con nuestra app para crear el EXE real
+          cmd /c "copy /b engine\nw.exe+app.nw UGR-Test-Final.exe"
+          # Copiamos las librerias necesarias
+          cp engine/*.dll .
+          cp engine/nw.pak .
+          cp engine/icudtl.dat .
+
+      - name: Subir Resultado
+        uses: actions/upload-artifact@v4
         with:
-          name: Juego-Psicomotricidad-EXE
-          path: ./*win32-x64/
+          name: Test-UGR-Funcional
+          path: |
+            UGR-Test-Final.exe
+            *.dll
+            *.pak
+            *.dat
