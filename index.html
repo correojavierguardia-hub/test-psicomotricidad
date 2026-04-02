@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UGR - Test Psicomotricidad Final</title>
+    <style>
+        :root {
+            --ugr-red: #c52f33;
+            --dental-blue: #2c3e50;
+            --pulp-pink: #ff7675;
+            --success-green: #2ecc71;
+            --gold: #f1c40f;
+            --acid-green: #a2de33;
+        }
+
+        body { font-family: 'Segoe UI', sans-serif; background-color: #000; margin: 0; overflow: hidden; color: white; }
+        #game-container { position: relative; width: 100vw; height: 100vh; }
+        canvas { display: block; background: var(--dental-blue); z-index: 1; }
+
+        .full-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; z-index: 100; padding: 40px; box-sizing: border-box;
+            background: #000;
+        }
+
+        .ugr-credits {
+            position: absolute; bottom: 30px; right: 40px; text-align: right;
+            border-right: 3px solid var(--ugr-red); padding-right: 15px;
+            letter-spacing: 1px; line-height: 1.2;
+        }
+        .ugr-credits span { display: block; font-weight: 800; font-size: 1.1rem; }
+        .ugr-credits small { font-size: 0.85rem; opacity: 0.8; text-transform: uppercase; }
+
+        button { 
+            padding: 18px 40px; font-size: 18px; cursor: pointer; border: none; 
+            color: white; border-radius: 8px; font-weight: bold; transition: 0.3s; margin: 10px;
+            z-index: 300; position: relative;
+        }
+        button:hover { opacity: 0.8; transform: scale(1.05); }
+        .btn-next { background: var(--ugr-red); }
+        .btn-start { background: var(--success-green); }
+        .btn-challenge { background: var(--gold); color: black; }
+        
+        .stat-val { color: var(--pulp-pink); font-family: monospace; }
+        .instruction-card { 
+            background: rgba(255,255,255,0.05); 
+            padding: 40px; border-radius: 15px; max-width: 750px; 
+            text-align: left; line-height: 1.6; border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .rank-title { font-size: 2.2rem; color: var(--acid-green); font-weight: 900; margin-top: 20px; text-transform: uppercase; }
+        .rank-quote { font-style: italic; color: #ccc; font-size: 1.1rem; margin-bottom: 30px; max-width: 700px; line-height: 1.4; }
+        
+        #break-title { font-size: 1.8rem; color: var(--pulp-pink); margin-bottom: 20px; max-width: 80%; }
+        .ui-bar {
+            position: absolute; top: 20px; right: 20px; padding: 15px; 
+            background: rgba(0, 0, 0, 0.9); border-radius: 12px; display: none; 
+            flex-direction: column; gap: 5px; font-weight: bold; z-index: 20;
+            border: 1px solid rgba(255,255,255,0.2); pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="screen-1-portada" class="full-screen">
+        <div style="font-size: 2.2rem; font-weight: 800; margin-bottom: 10px;">MATERIALES ODONTOLÓGICOS, INSTRUMENTACIÓN Y ERGONOMÍA</div>
+        <div style="font-size: 1.4rem; color: var(--gold); margin-bottom: 50px; text-transform: uppercase;">TEST DE PSICOMOTRICIDAD CON VISIÓN INDIRECTA</div>
+        <button class="btn-next" onclick="goToInstructions()">ACCEDER A LA PRUEBA</button>
+        <div class="ugr-credits"><span>UNIVERSIDAD DE GRANADA</span><small>FACULTAD DE ODONTOLOGÍA</small></div>
+    </div>
+
+    <div id="screen-2-instrucciones" class="full-screen" style="display:none;">
+        <div class="instruction-card">
+            <h2 style="color:var(--gold); text-align: center;">NIVEL 0: ENTRENAMIENTO</h2>
+            <p>Práctica libre. Sin penalizaciones. Familiarízate con el espejo.</p>
+            <p><b>Controles:</b> <kbd>ENTER</kbd> Pausa | <kbd>SUPR</kbd> Reiniciar posición.</p>
+            <center><button class="btn-start" onclick="startNivel0()">INICIAR PRÁCTICA</button></center>
+        </div>
+    </div>
+
+    <div id="screen-inicio-test" class="full-screen" style="display:none;">
+        <div class="instruction-card" style="border-color: var(--ugr-red);">
+            <h2 style="color:var(--ugr-red); text-align: center;">COMIENZO DEL TEST OFICIAL</h2>
+            <p>A partir de aquí, cada contacto cuenta como error y vuelves al inicio del nivel.</p>
+            <center><button class="btn-next" onclick="requestLockAndStart()">EMPEZAR EVALUACIÓN</button></center>
+        </div>
+    </div>
+
+    <div id="screen-break" class="full-screen" style="display:none;">
+        <h2 id="break-title">ERROR</h2>
+        <button class="btn-start" onclick="requestLockAndStart()">CONTINUAR</button>
+    </div>
+
+    <div id="screen-results" class="full-screen" style="display:none; background: #111;">
+        <h2>VEREDICTO DE COMPETENCIA</h2>
+        <div id="rank-name" class="rank-title"></div>
+        <div id="rank-text" class="rank-quote"></div>
+        <p>Errores: <span id="res-err" class="stat-val">0</span> | Tiempo: <span id="res-time" class="stat-val">0</span>s</p>
+        <div>
+            <button class="btn-challenge" onclick="iniciarReto()">¿ACEPTAR NIVELES RETO?</button>
+            <button class="btn-next" onclick="backToTraining()">VOLVER AL INICIO</button>
+        </div>
+    </div>
+
+    <div id="screen-final-reto" class="full-screen" style="display:none;">
+        <h1 style="color:var(--gold)">¡RETO COMPLETADO!</h1>
+        <div class="instruction-card" style="text-align:center;">
+            <p id="final-insult" style="font-size: 1.3rem; color: var(--acid-green); font-weight: bold;"></p>
+            <button class="btn-next" onclick="backToTraining()">TERMINAR</button>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+    <div id="ui-panel" class="ui-bar">
+        <div>NIVEL: <span id="lvl-txt" class="stat-val">0</span></div>
+        <div id="stats-area" style="display:none;">
+            <div>ERRORES: <span id="err-txt" class="stat-val">0</span></div>
+            <div>TIEMPO: <span id="timer-txt" class="stat-val">0.0</span>s</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const frasesError = [
+        "Has fallado... y no será la última vez.", "Un nuevo fallo, como el que hizo que tu ex te dejara.",
+        "¿Seguro que quieres ser dentista? La administración busca gente.", "Ese pulso no sirve ni para robar panderetas.",
+        "Acabas de extraerle el juicio... pero al paciente equivocado.", "Tiemblas más que un flan en un terremoto.",
+        "Incluso un paciente con anestesia total tendría mejores reflejos.", "Tus padres esperaban más de ti. Yo también.",
+        "¿Eso ha sido un movimiento o un espasmo de frustración?", "Tal vez la odontología sea solo un hobby caro para ti.",
+        "Ni con visión directa lo harías bien, ¿verdad?", "Relájate. Respira. Y asume que el pulso no es lo tuyo.",
+        "Esa pared no era una caries, genio.", "¿Has probado a usar la otra mano? Peor no puede ir.",
+        "Si así tratas a tus pacientes, ve contratando un buen abogado."
+    ];
+
+    const frasesVictoriaReto = [
+        "Por superar 2 niveles más no vas a aprobar si no estudias.", "Felicidades, eres el rey de un minijuego. Ahora vuelve a los libros.",
+        "Mucho reto y mucha tontería, pero el examen teórico te va a destruir.", "¿Has terminado ya? Bien, ahora intenta hacer algo útil con tu vida.",
+        "Presumes de nivel 6, pero tus notas dicen nivel 0.", "Un éxito rotundo en lo que no importa. Típico de ti.",
+        "Genial. Has malgastado 10 minutos más de estudio. Vas al suspenso.", "Dominas el ratón, lástima que el examen sea con bolígrafo.",
+        "Nivel 6 superado. Tu ego ha subido, tus posibilidades han bajado.", "Si dedicaras la mitad de este esfuerzo a la anatomía, serías alguien.",
+        "¿Quieres un aplauso o que te traiga el manual de Ergonomía?", "Has ganado. Toma tu premio invisible y ponte a estudiar.",
+        "Vaya, el azar te ha permitido ganar. No te acostumbres.", "Eres el mejor de la clase... en perder el tiempo.",
+        "Felicidades. El paciente de este nivel ha muerto de viejo esperándote."
+    ];
+
+    const ranks = [
+        { name: "Error en la Matrix", quote: "0 errores. Tiempo récord. O eres un bot o has hackeado el código.", cond: (e,t) => e==0 && t<40 },
+        { name: "Dios de la Turbina", quote: "Impecable. Tu pulso es tan estable que podrías operar en un terremoto.", cond: (e,t) => e<=2 && t<60 },
+        { name: "Cirujano de Élite", quote: "Muy buena técnica. Estás en el 1% superior. Disfruta de tu superioridad temporal.", cond: (e,t) => e<=5 && t<80 },
+        { name: "Odontólogo Promesa", quote: "No está mal. Tienes habilidad, pero te falta esa chispa de genialidad.", cond: (e,t) => e<=10 && t<100 },
+        { name: "Aprobado Raspado", quote: "Has pasado, pero tus pacientes saldrán con más traumas que dientes.", cond: (e,t) => e<=15 && t<130 },
+        { name: "Pulso de Cafetería", quote: "Demasiados errores. Se nota que desayunas tres cafés y nervios puros.", cond: (e,t) => e<=25 && t<160 },
+        { name: "Peligro Sanitario", quote: "Si esto fuera real, el Colegio de Odontólogos ya habría quemado tu título.", cond: (e,t) => e<=40 && t<200 },
+        { name: "Carnicero de Barrio", quote: "Tu técnica consiste en golpear paredes hasta que algo encaja. Patético.", cond: (e,t) => e<=60 || t<250 },
+        { name: "Abandona la Carrera", quote: "En serio, la Facultad de Derecho está cerca. Allí solo necesitas hablar.", cond: (e,t) => e<=100 || t<400 },
+        { name: "Atentado Biológico", quote: "He visto virus con mejor coordinación motriz que tú. Aléjate de las clínicas.", cond: (e,t) => true }
+    ];
+
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    let musicInterval = null, musicStep = 0;
+    const notes = { 'A4': 440, 'B4': 493.88, 'C5': 523.25, 'D5': 587.33, 'E5': 659.25, 'F5': 698.46, 'G5': 783.99, 'A5': 880 };
+    const tetrisMelody = [['E5', 4], ['B4', 8], ['C5', 8], ['D5', 4], ['C5', 8], ['B4', 8], ['A4', 4], ['A4', 8], ['C5', 8], ['E5', 4], ['D5', 8], ['C5', 8], ['B4', 4.5], ['C5', 8], ['D5', 4], ['E5', 4], ['C5', 4], ['A4', 4], ['A4', 4], [null, 4]];
+
+    function playNote(freq, dur) {
+        if (!freq) return;
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = 'square'; osc.frequency.value = freq;
+        g.gain.setValueAtTime(0.04, audioCtx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+        osc.connect(g); g.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + dur);
+    }
+
+    function startMusic() {
+        if (musicInterval || currentLevel === 0) return;
+        const tempo = (currentLevel >= 5) ? 120 : 170;
+        musicInterval = setInterval(() => {
+            if (gameActive && !isPaused) {
+                const n = tetrisMelody[musicStep];
+                if (n[0]) playNote(notes[n[0]], (60/tempo)*4/n[1]);
+                musicStep = (musicStep + 1) % tetrisMelody.length;
+            }
+        }, 180);
+    }
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    let currentLevel = 0, totalErrors = 0, gameActive = false, isPaused = false;
+    let startTime = null, totalPauseDuration = 0, lastPauseTime = 0, accumulatedTime = 0, timerInterval;
+    let player = { x: 0, y: 0, r: 4 };
+
+    const levels = {
+        0: { start: {x:60,y:60}, path:[{x:30,y:30,w:300,h:100},{x:230,y:30,w:100,h:300},{x:230,y:230,w:300,h:100},{x:430,y:230,w:100,h:300}], goal:{x:455,y:455,w:50,h:50}, shake:0 },
+        1: { start: {x:80,y:80}, path:[{x:40,y:40,w:60,h:400},{x:40,y:380,w:500,h:60}], goal:{x:490,y:390,w:40,h:40}, shake:0 },
+        2: { start: {x:50,y:400}, path:[{x:40,y:380,w:150,h:50},{x:140,y:200,w:50,h:230},{x:140,y:180,w:300,h:50},{x:390,y:180,w:50,h:250},{x:390,y:380,w:200,h:50}], goal:{x:540,y:385,w:40,h:40}, shake:3 },
+        3: { start: {x:550,y:70}, path:[{x:150,y:50,w:450,h:45},{x:150,y:50,w:45,h:200},{x:150,y:205,w:450,h:45},{x:555,y:205,w:45,h:200},{x:150,y:360,w:450,h:45}], goal:{x:155,y:365,w:35,h:35}, shake:5 },
+        4: { start: {x:50,y:50}, path:[{x:30,y:30,w:550,h:35},{x:545,y:30,w:35,h:300},{x:250,y:295,w:330,h:35},{x:250,y:200,w:35,h:130}], goal:{x:250,y:200,w:35,h:30}, shake:8 },
+        5: { start: {x:70,y:500}, path:[{x:40,y:480,w:100,h:65},{x:100,y:100,w:40,h:400},{x:100,y:100,w:500,h:40},{x:560,y:100,w:40,h:400},{x:300,y:460,w:300,h:40},{x:300,y:250,w:40,h:250},{x:300,y:250,w:150,h:40}], goal:{x:420,y:235,w:45,h:45}, shake:0 },
+        6: { start: {x:60,y:45}, path:[{x:30,y:30,w:700,h:45},{x:690,y:30,w:45,h:500},{x:100,y:490,w:630,h:45},{x:100,y:100,w:45,h:430},{x:100,y:100,w:500,h:45},{x:560,y:100,w:45,h:350},{x:200,y:415,w:400,h:45}], goal:{x:210,y:400,w:55,h:55}, shake:0 }
+    };
+
+    function drawTooth(x, y, w, h) {
+        ctx.save(); ctx.translate(x + w/2, y + h/2); ctx.scale(Math.min(w,h)/100, Math.min(w,h)/100);
+        ctx.fillStyle = "#FFFFF0"; ctx.beginPath(); ctx.moveTo(-35,-15); ctx.bezierCurveTo(-45,-40,-15,-50,0,-40); ctx.bezierCurveTo(15,-50,45,-40,35,-15); ctx.bezierCurveTo(45,10,40,30,25,40); ctx.bezierCurveTo(15,50,5,45,0,40); ctx.bezierCurveTo(-5,45,-15,50,-25,40); ctx.bezierCurveTo(-40,30,-45,10,-35,-15); ctx.fill();
+        ctx.fillStyle = "#1A1A1A"; ctx.beginPath(); ctx.ellipse(-25,-30,7,10,Math.PI/4,0,Math.PI*2); ctx.fill(); ctx.restore();
+    }
+
+    // FUNCIÓN PARA VOLVER A EXPLICACIÓN NIVEL 0
+    function backToTraining() {
+        gameActive = false; isPaused = false;
+        clearInterval(timerInterval); timerInterval = null;
+        clearInterval(musicInterval); musicInterval = null;
+        currentLevel = 0; totalErrors = 0; accumulatedTime = 0; startTime = null; totalPauseDuration = 0;
+        document.getElementById('err-txt').innerText = "0"; document.getElementById('timer-txt').innerText = "0.0";
+        document.querySelectorAll('.full-screen').forEach(s => s.style.display = 'none');
+        document.getElementById('screen-2-instrucciones').style.display = 'flex';
+        document.getElementById('ui-panel').style.display = 'none';
+        document.getElementById('stats-area').style.display = 'none';
+        if(document.pointerLockElement) document.exitPointerLock();
+    }
+
+    function goToInstructions() { document.getElementById('screen-1-portada').style.display = 'none'; document.getElementById('screen-2-instrucciones').style.display = 'flex'; }
+    function startNivel0() { document.getElementById('screen-2-instrucciones').style.display = 'none'; currentLevel = 0; requestLockAndStart(); }
+
+    function draw() {
+        ctx.fillStyle = "#2c3e50"; ctx.fillRect(0,0,canvas.width,canvas.height);
+        const lvl = levels[currentLevel];
+        ctx.fillStyle = "white"; lvl.path.forEach(r => ctx.fillRect(r.x,r.y,r.w,r.h));
+        ctx.fillStyle = "rgba(255,118,115,0.95)"; ctx.fillRect(lvl.goal.x,lvl.goal.y,lvl.goal.w,lvl.goal.h);
+        drawTooth(lvl.goal.x,lvl.goal.y,lvl.goal.w,lvl.goal.h);
+        ctx.beginPath(); ctx.arc(player.x,player.y,player.r,0,Math.PI*2); ctx.fillStyle = "#0984e3"; ctx.fill();
+    }
+
+    function checkCollision() {
+        const lvl = levels[currentLevel];
+        let safe = false;
+        lvl.path.forEach(r => { if(player.x >= r.x && player.x <= r.x+r.w && player.y >= r.y && player.y <= r.y+r.h) safe = true; });
+        if(!safe && gameActive && !isPaused) {
+            if (currentLevel === 0) { player.x = lvl.start.x; player.y = lvl.start.y; } 
+            else {
+                gameActive = false; isPaused = true; clearInterval(musicInterval); musicInterval = null; document.exitPointerLock(); 
+                totalErrors++; document.getElementById('err-txt').innerText = totalErrors;
+                document.getElementById('break-title').innerText = frasesError[Math.floor(Math.random()*frasesError.length)];
+                document.getElementById('screen-break').style.display = 'flex';
+            }
+        }
+        if(player.x > lvl.goal.x && player.x < lvl.goal.x+lvl.goal.w && player.y > lvl.goal.y && player.y < lvl.goal.y+lvl.goal.h) winLevel();
+    }
+
+    function winLevel() {
+        gameActive = false; clearInterval(musicInterval); musicInterval = null; document.exitPointerLock();
+        if(currentLevel === 0) { document.getElementById('screen-inicio-test').style.display = 'flex'; currentLevel = 1; } 
+        else if(currentLevel === 4) { showResults(); } 
+        else if(currentLevel === 6) { 
+            document.getElementById('screen-final-reto').style.display = 'flex';
+            document.getElementById('final-insult').innerText = frasesVictoriaReto[Math.floor(Math.random()*frasesVictoriaReto.length)];
+        } else {
+            currentLevel++; document.getElementById('break-title').innerText = "NIVEL SUPERADO.";
+            document.getElementById('screen-break').style.display = 'flex';
+        }
+    }
+
+    function showResults() {
+        document.getElementById('screen-results').style.display = 'flex';
+        document.getElementById('res-err').innerText = totalErrors;
+        document.getElementById('res-time').innerText = accumulatedTime.toFixed(1);
+        const rank = ranks.find(r => r.cond(totalErrors, accumulatedTime)) || ranks[9];
+        document.getElementById('rank-name').innerText = rank.name;
+        document.getElementById('rank-text').innerText = rank.quote;
+    }
+
+    function iniciarReto() { document.getElementById('screen-results').style.display = 'none'; currentLevel = 5; requestLockAndStart(); }
+
+    function requestLockAndStart() {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        document.querySelectorAll('.full-screen').forEach(s => s.style.display = 'none');
+        canvas.requestPointerLock();
+        document.getElementById('ui-panel').style.display = "flex";
+        if(currentLevel > 0) { document.getElementById('stats-area').style.display = "block"; startMusic(); }
+        document.getElementById('lvl-txt').innerText = currentLevel;
+        if(isPaused && lastPauseTime > 0) totalPauseDuration += (Date.now() - lastPauseTime);
+        isPaused = false; gameActive = true;
+        if(!startTime && currentLevel > 0) startTime = Date.now();
+        if(!timerInterval && currentLevel >= 1) {
+            timerInterval = setInterval(() => { if(gameActive && !isPaused) { accumulatedTime = (Date.now() - startTime - totalPauseDuration) / 1000; document.getElementById('timer-txt').innerText = accumulatedTime.toFixed(1); } }, 100);
+        }
+        player.x = levels[currentLevel].start.x; player.y = levels[currentLevel].start.y;
+        requestAnimationFrame(gameLoop);
+    }
+
+    function gameLoop() { if(!gameActive || isPaused) return; draw(); checkCollision(); requestAnimationFrame(gameLoop); }
+
+    document.addEventListener('mousemove', (e) => {
+        if(!gameActive || isPaused || document.pointerLockElement !== canvas) return;
+        player.x -= e.movementX * 0.7; player.y -= e.movementY * 0.7;
+        const s = levels[currentLevel].shake;
+        if(s > 0) { player.x += (Math.random()-0.5)*s; player.y += (Math.random()-0.5)*s; }
+        player.x = Math.max(5, Math.min(canvas.width-5, player.x)); player.y = Math.max(5, Math.min(canvas.height-5, player.y));
+    });
+
+    window.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.altKey && gameActive) { winLevel(); return; }
+        if (e.key === "Delete" && gameActive) { player.x = levels[currentLevel].start.x; player.y = levels[currentLevel].start.y; }
+        if (e.key === "Enter" && gameActive && !isPaused) { 
+            isPaused = true; clearInterval(musicInterval); musicInterval = null; lastPauseTime = Date.now(); document.exitPointerLock(); 
+            document.getElementById('break-title').innerText = "PAUSA. VE A LLORAR UN RATO."; document.getElementById('screen-break').style.display = 'flex'; 
+        }
+    });
+
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+</script>
+</body>
+</html>
