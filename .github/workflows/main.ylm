@@ -1,0 +1,31 @@
+name: Ejecutable Final Garantizado
+on: [push, workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Descargar codigo
+        uses: actions/checkout@v4
+
+      - name: Descargar motor NW.js
+        run: |
+          curl -L https://dl.nwjs.io/v0.82.0/nwjs-v0.82.0-win-x64.zip -o nwjs.zip
+          7z x nwjs.zip
+          mv nwjs-v0.82.0-win-x64 dist
+
+      - name: Preparar Carpeta de Juego
+        shell: pwsh
+        run: |
+          # Copiamos tu codigo a la carpeta del motor
+          cp index.html dist/
+          cp package.json dist/
+          # El ejecutable principal ya existe en 'dist/nw.exe'
+          # Solo le cambiamos el nombre para que sea mas profesional
+          mv dist/nw.exe dist/UGR-Test-Psicomotricidad.exe
+
+      - name: Subir Juego Completo
+        uses: actions/upload-artifact@v4
+        with:
+          name: TEST-UGR-VERSION-FINAL
+          path: dist/
