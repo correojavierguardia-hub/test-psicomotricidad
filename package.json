@@ -1,11 +1,12 @@
 {
-  "name": "ugr-test-psicomotricidad",
+  "name": "ugr-test",
   "main": "index.html",
+  "chromium-args": "--disable-gpu",
   "window": {
     "title": "UGR - Test Psicomotricidad",
     "width": 1000,
     "height": 800,
     "toolbar": false,
-    "fullscreen": false
+    "resizable": true
   }
 }
