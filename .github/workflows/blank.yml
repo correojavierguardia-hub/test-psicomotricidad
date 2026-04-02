@@ -1,24 +1,24 @@
 name: Crear Ejecutable Windows
-on: [push]
+on: [push, workflow_dispatch]
 
 jobs:
   build:
     runs-on: windows-latest
     steps:
       - name: Descargar codigo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4 # Actualizado a v4
 
       - name: Instalar Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4 # Actualizado a v4
         with:
-          node-version: 18
+          node-version: 20
 
       - name: Convertir HTML a EXE
         run: |
           npx nativefier "file:///${{ github.workspace }}/index.html" --name "UGR-Test" --internal-urls ".*" --single-instance
           
       - name: Guardar el archivo EXE
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4 # <--- ESTA ES LA LÍNEA CRÍTICA QUE DABA ERROR
         with:
           name: Juego-Psicomotricidad-EXE
           path: ./*win32-x64/
